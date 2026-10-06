@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- 与主程序同一来源的图标（exe 文件图标 / 任务栏观感一致） -->
     <ApplicationIcon>..\Cship\app.ico</ApplicationIcon>
-    <Version>0.1.0</Version>
+    <Version>1.1.0</Version>
     <DebugType>none</DebugType>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- 主项目把 PerMonitorV2 放在 app.manifest，引导器同口径；WinForms 专属提示同主项目抑制 -->
