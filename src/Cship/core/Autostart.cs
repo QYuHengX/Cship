@@ -4,19 +4,19 @@ namespace Cship.Core;
 
 /// <summary>
 /// 开机自启动（步骤 05 GlobalPage）：写/删 HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-/// 的 "Cship" 键（00 §10.3 唯一允许的注册表写区）。值=运行时解析的可执行入口：
-/// 发布态为 Cship.exe 绝对路径；开发态（dotnet run）为构建输出的 apphost 路径，
-/// 带 --autostart 参数走静默启动（App.LaunchedWithAutostart）。
+/// 的 "Cship" 键（00 §10.3 唯一允许的注册表写区）。值=运行时解析的可执行入口
+/// （Paths.LauncherExe：完整版=自身 exe；精简版=程序根的引导器——只有它知道本地运行时在哪，
+/// 开机直接启动主程序会因找不到运行时而失败），带 --autostart 参数走静默启动。
 /// </summary>
 public static class Autostart
 {
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string ValueName = "Cship";
 
-    /// <summary>自启动命令行：exe 绝对路径 + --autostart（开发态为 bin 输出的 apphost，STEP_LOG 记录）。</summary>
+    /// <summary>自启动命令行：入口 exe 绝对路径 + --autostart（精简版写引导器，引导器转发参数）。</summary>
     static string Command()
     {
-        string exe = Environment.ProcessPath ?? System.IO.Path.Combine(Paths.AppDir(), "Cship.exe");
+        string exe = Paths.LauncherExe();
         return $"\"{exe}\" --autostart";
     }
 

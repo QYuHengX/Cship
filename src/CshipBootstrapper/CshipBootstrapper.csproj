@@ -25,4 +25,10 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
 
+  <!-- 精简版主程序以内嵌资源打进引导器（build.ps1 以 -p:MainAppExe=<framework-dependent 单文件> 传入）。
+       直接编译本项目（不传属性）得到的是"无主程序"的引导器，仅供开发调试，交付必须走 build.ps1。 -->
+  <ItemGroup Condition="'$(MainAppExe)' != ''">
+    <EmbeddedResource Include="$(MainAppExe)" LogicalName="Cship.AppExe" Visible="false" />
+  </ItemGroup>
+
 </Project>

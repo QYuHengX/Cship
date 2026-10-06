@@ -9,12 +9,12 @@
       .NET 8 运行时（CoreCLR + WPF + BCL + ICU）是不可分割的整体：WPF 不支持裁剪
       （PublishTrimmed 会运行时崩溃），压缩后的 63/58 MB 就是"离线即用"的正路下限。
 
-    Releases\精简版\   —— 初始 **约 4 MB**，首次运行联网获取 .NET 8（多源 + 进度条，免管理员免安装）
-      Cship.exe / Cship-x86.exe            ← 引导器（net48，系统自带 .NET Framework 4.8 即可运行）
-      Cship.app.exe / Cship.app-x86.exe    ← 主程序（framework-dependent 单文件）
-      dependencies\resources\              ← 预置
-      dependencies\runtime\{arch}\dotnet   ← 引导器下载后生成：基础运行时 + WPF 框架两包叠加解压，
+    Releases\精简版\   —— 初始 **约 2.5 MB，全目录仅两个 exe**，首次运行联网获取 .NET 8（多源 + 进度条，免管理员免安装）
+      Cship.exe / Cship-x86.exe            ← 引导器（net48；主程序以内嵌资源打进其中）：
+                                              启动时先把主程序释放到 dependencies\app\（hash 比对增量），
+                                              再检测/下载运行时（dependencies\runtime\{arch}\dotnet），
                                               注入 DOTNET_ROOT_X64/X86 启动，**不装系统、零注册表残留**
+      dependencies\resources\              ← 预置；dependencies\{app,runtime,config}\ 均为首启生成的运行时结构
 
   发布参数口径：
     PublishTrimmed=false                  WPF 不支持裁剪，严禁改 true
@@ -99,9 +99,15 @@ function Invoke-CshipPublish {
 }
 
 function Invoke-BootstrapperBuild {
-    param([string]$Dest)
-    $pubArgs = @('publish', $bootProj, '-c', 'Release', '-v', 'minimal', '-o', $Dest)
-    Write-Host '  引导器（net48）...' -ForegroundColor DarkGray
+    param([string]$Dest, [string]$MainAppExe)
+    $pubArgs = @(
+        'publish', $bootProj,
+        '-c', 'Release',
+        "-p:MainAppExe=$MainAppExe",
+        '-v', 'minimal',
+        '-o', $Dest
+    )
+    Write-Host '  引导器（net48，内嵌主程序）...' -ForegroundColor DarkGray
     $output = & dotnet @pubArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         $output | Select-Object -Last 40 | ForEach-Object { Write-Host $_ }
@@ -140,21 +146,20 @@ if ($Mode -in @('both', 'full')) {
     Copy-Resources -DestDir $fullDir
 }
 
-# 3) 精简版：主程序 framework-dependent + 引导器
+# 3) 精简版：主程序 framework-dependent 单文件 → 作为内嵌资源打进引导器。
+#    引导器运行时按需把主程序释放到 dependencies\app\（仅两个 exe 的交付形态，主程序属"运行时生成"）。
 if ($Mode -in @('both', 'lite')) {
     New-Item -ItemType Directory -Force -Path $liteDir | Out-Null
     if ($Only -in @('both', 'x64')) {
         Invoke-CshipPublish -Rid 'win-x64' -Dest (Join-Path $stage 'lite-x64') -SelfContained $false -Compressed $false -Label 'framework-dependent'
-        Copy-Item -LiteralPath (Join-Path $stage 'lite-x64\Cship.exe') -Destination (Join-Path $liteDir 'Cship.app.exe') -Force
+        Invoke-BootstrapperBuild -Dest (Join-Path $stage 'boot-x64') -MainAppExe (Join-Path $stage 'lite-x64\Cship.exe')
+        Copy-Item -LiteralPath (Join-Path $stage 'boot-x64\CshipBootstrapper.exe') -Destination (Join-Path $liteDir 'Cship.exe') -Force
     }
     if ($Only -in @('both', 'x86')) {
         Invoke-CshipPublish -Rid 'win-x86' -Dest (Join-Path $stage 'lite-x86') -SelfContained $false -Compressed $false -Label 'framework-dependent'
-        Copy-Item -LiteralPath (Join-Path $stage 'lite-x86\Cship.exe') -Destination (Join-Path $liteDir 'Cship.app-x86.exe') -Force
+        Invoke-BootstrapperBuild -Dest (Join-Path $stage 'boot-x86') -MainAppExe (Join-Path $stage 'lite-x86\Cship.exe')
+        Copy-Item -LiteralPath (Join-Path $stage 'boot-x86\CshipBootstrapper.exe') -Destination (Join-Path $liteDir 'Cship-x86.exe') -Force
     }
-    # 引导器：同一 AnyCPU 程序集改名两次（运行时按自身文件名区分 x86/x64 语义）
-    Invoke-BootstrapperBuild -Dest (Join-Path $stage 'boot')
-    Copy-Item -LiteralPath (Join-Path $stage 'boot\CshipBootstrapper.exe') -Destination (Join-Path $liteDir 'Cship.exe') -Force
-    Copy-Item -LiteralPath (Join-Path $stage 'boot\CshipBootstrapper.exe') -Destination (Join-Path $liteDir 'Cship-x86.exe') -Force
     Copy-Resources -DestDir $liteDir
 }
 

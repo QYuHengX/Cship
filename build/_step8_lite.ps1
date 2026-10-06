@@ -21,8 +21,8 @@ Get-Process Cship, Cship.app, CshipBootstrapper -ErrorAction SilentlyContinue | 
 Start-Sleep -Milliseconds 800
 if (Test-Path -LiteralPath $rtRoot) { Remove-Item -LiteralPath $rtRoot -Recurse -Force }
 Write-Host ("引导器: {0}" -f $bootExe)
-Write-Host ("exe 体积: 引导器 {0:N0} KB + 主程序 {1:N0} KB" -f `
-        ((Get-Item $bootExe).Length / 1KB), ((Get-Item (Join-Path $LiteDir 'Cship.app.exe')).Length / 1KB))
+Write-Host ("exe 体积（引导器，内嵌主程序）: {0:N0} KB" -f ((Get-Item $bootExe).Length / 1KB))
+$relApp = Join-Path $LiteDir 'dependencies\app\Cship.app.exe'
 
 # 1) 强制引导（CSHIP_FORCE_BOOTSTRAP=1）：即使系统已有运行时也走下载窗体
 $env:CSHIP_FORCE_BOOTSTRAP = '1'
@@ -56,6 +56,8 @@ if (Test-Path -LiteralPath $rtRoot) {
 
 # 3) 等引导器退出（启动主程序后）并确认主程序悬浮窗
 Start-Sleep -Seconds 3
+if (-not (Test-Path -LiteralPath $relApp)) { throw ("主程序未释放: " + $relApp) }
+Write-Host ("[释放] 主程序已就位: dependencies\app\Cship.app.exe ({0:N0} KB)" -f ((Get-Item -LiteralPath $relApp).Length / 1KB))
 $main = Get-Process 'Cship.app' -ErrorAction SilentlyContinue
 if (-not $main) { throw '主程序（Cship.app）未启动' }
 $visMs = $sw.ElapsedMilliseconds

@@ -19,7 +19,7 @@ namespace Cship.Bootstrapper
     /// </summary>
     internal sealed class BootstrapForm : Form
     {
-        private readonly string _exeDir, _arch, _envName, _mainExe, _logPath;
+        private readonly string _exeDir, _arch, _envName, _mainExe, _forward, _logPath;
         private string _zipBase, _zipDesktop;
 
         private Label _title, _desc, _status;
@@ -39,12 +39,13 @@ namespace Cship.Bootstrapper
         private double _speedBps;
         private bool _running;
 
-        public BootstrapForm(string exeDir, string arch, string envName, string mainExe, string logPath)
+        public BootstrapForm(string exeDir, string arch, string envName, string mainExe, string forward, string logPath)
         {
             _exeDir = exeDir;
             _arch = arch;
             _envName = envName;
             _mainExe = mainExe;
+            _forward = forward;
             _logPath = logPath;
 
             BuildUi();

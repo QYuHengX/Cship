@@ -2712,3 +2712,79 @@ Releases\
    本机只实测了 x64 链路（x86 主程序 WOW64 已在完整版验证）。
 3. **慢速/受限网络下的换源体验**：三源轮询与"更换下载源"按钮已实现，多源全挂时的提示与"改用完整版"
    引导文案待真实弱网复核。
+
+---
+
+## 步骤08 修订 · 精简版合并为两个 exe（2026-10-06 · 用户要求）
+
+- **用户要求（原文）**："精简版引导器与主程序合并，仅保留两个 exe。"
+- **交付形态变化**：精简版从 4 个 exe（2 引导器 + 2 主程序）变为 **2 个 exe**——用户双击的
+  `Cship.exe` / `Cship-x86.exe` 就是"引导器 ⊕ 主程序合体"：主程序（framework-dependent 单文件）
+  作为**内嵌资源**打进引导器，首次运行时由引导器释放到 `dependencies\app\`。
+
+### 一、合体设计
+
+1. **构建侧**（`build.ps1` lite 分支）：先 publish 主程序（framework-dependent 单文件），
+   再以 `-p:MainAppExe=<主程序 exe>` 构建引导器——csproj 条件嵌入
+   `<EmbeddedResource Include="$(MainAppExe)" LogicalName="Cship.AppExe" />`，x64/x86 各构建一次
+   （分别内嵌对应架构的主程序）。**单独编译引导器项目得到的是"无主程序"的调试产物，交付必须走 build.ps1。**
+2. **释放策略**（`EnsureAppExe`）：目标 = `dependencies\app\Cship.app[.x86].exe`；
+   SHA256 与内嵌资源比对——**一致跳过**（二次启动零 IO 开销）、不一致覆写（升级）、
+   写入被文件锁拦截（主程序正在运行）→ 沿用现有文件并记日志（启动会命中单实例互斥去激活已有实例，
+   真正升级在用户退出后下次引导完成），绝不因锁崩溃。
+3. **配置路径回溯（`Paths.DepsDir` 改造）**：主程序被释放到 `dependencies\app\` 后 exe 旁没有 dependencies——
+   `DepsDir()` 改为"exe 旁优先命中；否则向上回溯（≤6 级）到含 `resources` 子目录的 `dependencies\`"。
+   **布局分叉收敛在路径唯一出口内**（00 §5.3 语义不变），调用方零改动；完整版/开发态仍走 exe 旁优先，行为不变。
+   实测：config 正确落在程序根 `dependencies\config\`，主程序图标/文案全部加载正常。
+4. **自启动与重启必须走引导器（决策 303）**：精简版下直接启动 app exe 找不到本地运行时（DOTNET_ROOT
+   无人注入）→ `Paths.LauncherExe()`：完整版返回自身 ProcessPath（行为不变），精简版返回程序根的
+   `Cship.exe`/`Cship-x86.exe`（按自身架构）。三处调用点全部切换：`Autostart.Command`、
+   `App.Restart`（托盘重启）、`TrayController` 的图标提取不受影响（仍用自身 exe）。
+   引导器**转发命令行**（含空格加引号），开机自启的 `--autostart` 原样传给主程序。
+5. **新增 `Paths.IsDetachedApp` / `ProgramRoot()`**：精简版形态判定（exe 旁无 dependencies）与程序根解析。
+
+### 二、实测（`build\_step8_lite.ps1`，含真实下载）
+
+| 指标 | 数值 |
+|---|---|
+| 引导器（内嵌主程序后） | **1,136 KB / 1,108 KB**（x64/x86），精简版合计 2.5 MB |
+| 首启：释放主程序 → 弹窗 → 下载 68MB → 解压 → 启动 | 释放即时；窗体 816ms；下载+解压 ~10s；主程序 977 KB 就位 ✅ |
+| 释放日志 | `已释放主程序：…dependencies\app\Cship.app.exe（1000070 字节）` ✅ |
+| 二次启动 | `主程序已是当前版本，跳过释放` → 直接转发，主程序 2.0s 内启动 ✅ |
+| config 位置 | 程序根 `dependencies\config\`（settings/state/assets/iconcache/logs）✅ |
+| 主程序 | 悬浮窗可见，WS 115.8 MB ✅ |
+
+### 三、交付终态（`Releases\精简版\`，全目录仅两个 exe）
+
+```
+精简版\                                2.5 MB
+├─ Cship.exe                           1,136 KB（引导器 ⊕ x64 主程序）
+├─ Cship-x86.exe                       1,108 KB（引导器 ⊕ x86 主程序）
+└─ dependencies\resources\             0.3 MB（预置）
+   首启生成：dependencies\app\（主程序 977KB）+ runtime\{arch}\dotnet\（~160MB）+ config\
+```
+
+### 补充决策（续 301）
+
+302. **精简版合并为"两个 exe"：主程序以嵌入资源随引导器走，配置路径向上回溯**。主程序释放到
+     `dependencies\app\` 而非程序根——保持"交付目录只有两个 exe"的用户观感（app/runtime/config
+     全部归入"首启生成的运行时结构"）。**布局分叉必须收敛在 `Paths` 单一出口内**：DepsDir 先 exe 旁
+     优先、否则向上回溯（带 resources 存在性校验防误命中）——调用方零改动，完整版/开发态行为不变。
+303. **自启动与重启必须经引导器拉起**：精简版的本地运行时只有引导器知道（DOTNET_ROOT 由它注入），
+     直接启动 app exe 必然失败。`Paths.LauncherExe()` 统一解析入口（完整版=自身，精简版=程序根引导器），
+     Autostart 与 App.Restart 两处切换；引导器转发自身命令行（`--autostart` 原样透传）。
+304. **释放用 SHA256 增量 + 文件锁降级**：每次启动比对内嵌资源与目标文件哈希（升级即覆写、一致零开销）；
+     目标被锁（主程序运行中重复双击）时沿用现有文件而不是报错——单实例互斥会处理激活，升级延迟到
+     用户正常退出后的下一次引导，绝不因文件锁崩溃。
+305. **嵌入注入用 msbuild 属性而不是中间目录**：`-p:MainAppExe=<路径>` + csproj 条件 `EmbeddedResource`
+     （LogicalName 固定），避免构建期复制文件产生的同步问题；不传属性构建出的引导器显式标注为
+     "调试产物"（运行时抛清晰错误，防止误交付）。
+
+### 给后续步骤的接口提示
+
+- 精简版目录结构速查：`Cship.exe`/`Cship-x86.exe`（合体引导器）→ 首启生成
+  `dependencies\{app,runtime,config}\`；**主程序 exe 的真实位置 = `dependencies\app\`**，
+  一切"主程序路径"逻辑（自启动、重启、快捷方式）一律走 `Paths.LauncherExe()`，不要手拼。
+- 主程序升级流：改源码 → `build.ps1 -Mode lite` → 引导器内嵌的新主程序 hash 变化 →
+  用户下次启动引导器时自动覆写 `dependencies\app\`（主程序运行中则顺延到下次）。
+- 开发态调试引导器：`dotnet build src\CshipBootstrapper` 得到无内嵌版本，运行会报"未内嵌主程序"——属预期。
