@@ -79,7 +79,7 @@ Cship 是一个**免安装、零依赖**的 Windows 桌面收纳工具。双击�
 纯净系统（无任何 .NET 环境）**双击即用、完全离线**，单架构约 60~64 MB。
 
 ```
-Releases\完整版\                 ← 复制到哪里都能跑，也可以整个改名
+Releases\Cship.net8.zip\                 ← 复制到哪里都能跑，也可以整个改名
 ├─ Cship.exe                     ← 64 位主程序（单文件，.NET 8 运行时整体打包）
 ├─ Cship-x86.exe                 ← 32 位主程序（与 64 位共用同一份配置）
 └─ dependencies\
@@ -98,7 +98,7 @@ Releases\完整版\                 ← 复制到哪里都能跑，也可以整�
 不需要管理员权限。之后每次启动直接进主程序，**完全离线**。
 
 ```
-Releases\精简版\                        ← 全目录只有这两个 exe，其余结构首启自动生成
+Releases\Cship.zip\                        ← 全目录只有这两个 exe，其余结构首启自动生成
 ├─ Cship.exe / Cship-x86.exe           ← 引导器 ⊕ 主程序合体（双击这个；主程序内嵌其中，
 │                                          首次运行自动释放到 dependencies\app\，之后增量更新）
 └─ dependencies\
