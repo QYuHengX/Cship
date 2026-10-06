@@ -39,6 +39,7 @@ internal static class Program
         if (mode is "all" or "dock") fail += DockLayerOpacity();
         if (mode is "all" or "dockbind") fail += DockLayerBinding();
         if (mode is "all" or "pers") fail += PersonalizePageSmoke();
+        if (mode is "all" or "about") fail += AboutPageSmoke();
         Console.WriteLine(fail == 0 ? "== ALL PASS ==" : $"== FAILED（{fail} 条）==");
         SettingsStore.Instance.Flush();
         StateStore.Instance.Flush();
@@ -409,5 +410,78 @@ internal static class Program
         }
         Walk(root);
         return found;
+    }
+
+    /// <summary>逻辑树遍历（离屏夹具用：无 PresentationSource 时视觉树可能未把 Content 接上）。</summary>
+    static List<T> FindLogical<T>(DependencyObject root, Func<T, bool> match) where T : DependencyObject
+    {
+        var found = new List<T>();
+        void Walk(DependencyObject node)
+        {
+            foreach (object child in System.Windows.LogicalTreeHelper.GetChildren(node))
+            {
+                if (child is not DependencyObject dep) continue;
+                if (child is T typed && match(typed)) found.Add(typed);
+                Walk(dep);
+            }
+        }
+        Walk(root);
+        return found;
+    }
+
+    // ---------------- G. 关于页扩展内容（2026-10-06 用户要求：四个大按钮折叠项 + 致谢段） ----------------
+
+    /// <summary>
+    /// 自检关于页扩展：四个 InfoExpander（仓库/许可证/开发者/Bilibili）+ 无标题致谢段都已在
+    /// 页面树中；整页（亮/暗）与各折叠项展开内容（经反射取私有 _contentHost）离屏出图供人工核对。
+    /// </summary>
+    static int AboutPageSmoke()
+    {
+        Console.WriteLine("\n==== G. 关于页扩展内容 ====");
+        int fail = 0;
+        string dir = ShotDir();
+        Directory.CreateDirectory(dir);
+
+        string[] modes = { "light", "dark" };
+        foreach (var mode in modes)
+        {
+            SettingsStore.Instance.SetString("theme.mode", mode);
+            var page = new Cship.Ui.Pages.AboutPage();
+            var host = new System.Windows.Controls.Border
+            {
+                Background = Cship.Ui.Components.SettingsPalette.Bg(ThemeResolver.IsDark()),
+                Child = page,
+            };
+
+            // 视觉树在离屏（无 PresentationSource）下 ScrollViewer 模板链可能不完整，逻辑树更可靠
+            var expanders = FindLogical<Cship.Ui.Components.InfoExpander>(host, _ => true);
+            var allTexts = FindLogical<System.Windows.Controls.TextBlock>(host, _ => true);
+            var allBorders = FindLogical<System.Windows.Controls.Border>(host, _ => true);
+            Console.WriteLine($"[{mode}] 诊断：TextBlock={allTexts.Count} Border={allBorders.Count} 折叠项 {expanders.Count}/4（仓库/许可证/开发者/Bilibili）");
+            if (expanders.Count != 4) { Console.WriteLine("[FAIL] 大按钮折叠项数量不符（应为 4）"); fail++; }
+
+            // 折叠项内容经反射取出渲染（展开卡走 ExpanderOverlay，离屏无承载层，直接画内容板）
+            var contentField = typeof(Cship.Ui.Components.InfoExpander).GetField("_contentHost",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            int idx = 0;
+            string[] names = { "repo", "license", "developer", "bilibili" };
+            foreach (var exp in expanders)
+            {
+                if (contentField?.GetValue(exp) is System.Windows.Controls.StackPanel content &&
+                    content.Children.Count > 0 &&
+                    content.Children[0] is System.Windows.FrameworkElement inner)
+                {
+                    string path = Path.GetFullPath(Path.Combine(dir, $"about_{mode}_{names[idx++]}.png"));
+                    Shot(inner, 430, 220, path);
+                }
+                else { Console.WriteLine("[FAIL] 折叠项内容为空（SetContent 未生效）"); fail++; }
+            }
+
+            string pagePath = Path.GetFullPath(Path.Combine(dir, $"about_{mode}_page.png"));
+            Shot(host, 466, 980, pagePath);
+            Console.WriteLine($"[出图] about_{mode}_page.png + 内容 {idx}/4");
+            if (idx != 4) fail++;
+        }
+        return fail;
     }
 }
