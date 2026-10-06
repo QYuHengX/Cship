@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 引导器面向"没有 .NET 8 的机器"，因此目标框架用系统自带的 net48（Win10/11 均预装 4.8） -->
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>7.3</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>CshipBootstrapper</AssemblyName>
+    <RootNamespace>Cship.Bootstrapper</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 与主程序同一来源的图标（exe 文件图标 / 任务栏观感一致） -->
+    <ApplicationIcon>..\Cship\app.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <DebugType>none</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- 主项目把 PerMonitorV2 放在 app.manifest，引导器同口径；WinForms 专属提示同主项目抑制 -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+
+</Project>

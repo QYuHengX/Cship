@@ -13,7 +13,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build\<脚本名>.ps1 [参�
 | 脚本 | 作用 |
 |---|---|
 | `makeicon.ps1` | 由 `assets\CShip.png` 生成三处同源图标：`src\Cship\app.ico`（exe/任务栏）、`dependencies\resources\icons\app.ico`（托盘）、`app.png`（关于页 Logo）。幂等，可重复运行。替换图标 = 覆盖源图后重跑本脚本 + `build.ps1` |
-| `build.ps1` | 双架构单文件发布，产出到仓库**上一级的 `Releases\`**。默认**不压缩**（压缩省 76MB 体积但常驻内存 +120MB、启动慢 45%，见脚本头实测表）；`-Compress` 可开启 |
+| `build.ps1` | **双档**发布，产出到仓库**上一级的 `Releases\`**：`完整版\`（self-contained 单文件，默认压缩，离线即用）+ `精简版\`（framework-dependent 主程序 + net48 引导器，首启联网获取运行时）。`-Mode full\|lite` 单独出一档；`-NoCompress` 完整版关压缩（内存与启动更快、体积 +120MB） |
 
 ## 自检
 
@@ -37,6 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File build\<脚本名>.ps1 [参�
 | `_step8_smoke.ps1` | **发布态**冒烟：双击→悬浮窗可见耗时、内存、首启结构生成、日志 WARN/ERROR 统计。`-Exe <路径>` 指定发布产物 |
 | `_step8_board.ps1` | **发布态**开板内存：启动 →（可 `-Warmup 60` 等常驻稳定）→ 点击悬浮窗开板 → 测基线/峰值/稳定工作集 |
 | `_step8_port.ps1` | 移植性：中文+空格路径 / 跨分区 / 改名目录下的首启与二次运行（config 不重置），以及 `config` 只读时的降级行为 |
+| `_step8_lite.ps1` | **精简版引导器端到端**（含真实下载 ~68MB）：强制引导 → 弹窗 → 在线查版本 → 双包下载解压 → 启动主程序 → 二次启动直接转发 |
 | `_step8_shot.ps1` | 发布态开板截图取证 |
 
 ## 测试夹具（C#）

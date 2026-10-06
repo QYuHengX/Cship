@@ -8,6 +8,8 @@
 # ---- 运行时生成（程序首启自动重建，不入库）----
 # 开发态：csproj 把 dependencies\resources 复制到输出目录，其中的 config 是本机数据
 src/Cship/dependencies/config/
+# 精简版：引导器下载的 .NET 运行时（可再生，且体积巨大）
+**/dependencies/runtime/
 
 # ---- 构建 / 测试临时产物 ----
 build/_publish/

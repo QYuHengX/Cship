@@ -2571,3 +2571,144 @@ settings.json 与 state.json 逐字节还原。
 | **`Releases\` 合计** | **268.2 MB** |
 | 对照：`CShips\` 源码仓库（含文档） | 约 4 MB（不含 `.git`） |
 | 对照：若开启 `-Compress` | 63.2 + 57.9 + 0.3 ≈ **121.4 MB**（内存与启动代价见上） |
+
+---
+
+## 步骤08 修订 · 两档交付（2026-10-06 · 用户新规格：完整版 / 精简版）
+
+- **用户要求（原文三条）**：
+  1. "纯净系统打开即用，但不用包含完整 net8，需要哪个依赖保留哪个"；
+  2. "最大程度压缩体积，点开任意个 exe 后跳出弹窗，从互联网获取 net8 等非本项目原创的内容，进度条完成后方可使用，预留多个下载途径"（用户："构建前项目只有 5MB，构建后 300+ 给我吓哭了"）；
+  3. 源码仓库需改动的地方参考 1；1、2 分文件夹放 `Releases\` 里。
+- **交付形态**：`Releases\完整版\`（离线即用）+ `Releases\精简版\`（首启联网获取运行时）。
+
+### 一、技术事实先立住（为什么不是"把运行时删到只剩用到的"）
+
+- **WPF 不支持运行时裁剪**：`PublishTrimmed=true` 对 WPF 是官方未支持状态（反射/标记扩展场景运行时崩溃），
+  00/08 禁止；`InvariantGlobalization=true` 可省 ICU 但会破坏中文文件名排序（产品核心场景），同样禁止。
+  因此"需要哪个依赖保留哪个"在**离线即用**这一档没有官方实现路径——.NET 8 的
+  CoreCLR + WPF + BCL + ICU 是不可分割的整体，**压缩后的 63/58 MB 就是"纯净系统打开即用"的正路下限**。
+- 极小体积的正路是**framework-dependent**：主程序只剩 ~1 MB，运行时按需获取——这正是精简版（见下）。
+
+### 二、完整版（`Releases\完整版\` · self-contained，默认压缩）
+
+| 项 | 数值 |
+|---|---|
+| `Cship.exe`（x64，压缩） | 64,707 KB（63.2 MB） |
+| `Cship-x86.exe`（压缩） | 59,326 KB（57.9 MB） |
+| 合计（含 resources 0.3MB） | **121.4 MB**（此前未压缩单档为 268.2 MB） |
+| 双击 → 悬浮窗可见（压缩自解压） | **1755 ms**（< 3s ✅） |
+| 开板稳定 WS | 334.9 MB（压缩自解压常驻开销，已知边界） |
+| 启动期日志 | 0 WARN / 0 ERROR |
+
+- **完整版默认压缩**（决策 296 取代 291 的"默认不压缩"）：两档交付后完整版的定位是"网络不可用时的离线兜底"，
+  用户当前的显式诉求是体积（"吓哭了"）→ 体积优先；实测压缩代价（常驻内存 +120MB、启动慢 440~730ms，
+  决策 291 的数据仍成立）以"在意内存请用精简版"的口径写进 README 与 08 文档。`-NoCompress` 保留给需要
+  完整版跑满性能的场合。
+
+### 三、精简版（`Releases\精简版\` · framework-dependent + 引导器）
+
+**布局（初始合计 2.5 MB）**：
+
+```
+精简版\
+├─ Cship.exe / Cship-x86.exe            ← 引导器（net48 WinForms，157 KB；同一 AnyCPU 程序集改名两次）
+├─ Cship.app.exe / Cship.app-x86.exe    ← 主程序（framework-dependent 单文件，975 / 948 KB）
+└─ dependencies\resources\              ← 预置（与完整版同一套资源）
+```
+
+**引导器（`src\CshipBootstrapper`，新增项目）**：
+
+1. 查找顺序：本地 `dependencies\runtime\{arch}\dotnet`（此前下载）→ 系统安装位（`%ProgramFiles%\dotnet`，
+   x86 看 ProgramFiles(x86)）→ 都没有才弹下载窗。找到即启动主程序并退出：本地运行时注入
+   `DOTNET_ROOT_X64/X86`（.NET 6+ apphost 支持），系统运行时不注入。
+2. **下载 = 两个官方 zip 叠加解压**：官方没有"桌面完整根"zip——WindowsDesktop zip 顶层只有
+   `shared\Microsoft.WindowsDesktop.App`（**缺 apphost 启动必需的 host\fxr**，实测确认）；
+   基础 runtime zip 提供 `host\fxr + Microsoft.NETCore.App`。两包**覆盖式**解压到同一目录
+   （两包的 LICENSE.txt 同名会冲突，逐条 ExtractToFile(overwrite) 而非 ExtractToDirectory），
+   构成完整 DOTNET_ROOT 布局（实测落盘 160.1 MB）。
+3. **多源自动轮询**（实测三源均可直连）：`builds.dotnet.microsoft.com` · `dotnetcli.azureedge.net` ·
+   `dotnetcli.blob.core.windows.net`；前源失败自动切下一个，窗体上"更换下载源"按钮可立即中断当前源。
+   版本优先在线查 8.0 线元数据（releases.json 的 `latest-runtime`），失败退回内置常量 8.0.31。
+4. **免管理员、免安装、零系统残留**：下载到 %TEMP%、解压到程序目录，全程 asInvoker、不写注册表；
+   引导器面向 **net48**（Win10/11 自带 .NET Framework 4.8），在没有 .NET 8 的机器上也能跑起来弹窗。
+5. **排障开关**：`CSHIP_FORCE_BOOTSTRAP=1` 强制跳过检测直接进下载窗（重装运行时/自动化测试用）。
+6. 主程序缺失 → 错误弹窗退码 1；全部源失败 → 提示"改用完整版（离线、免下载）"。
+7. 引导日志：`dependencies\runtime\bootstrapper.log`（覆盖式小日志，只记录引导阶段）。
+
+**端到端实测（`build\_step8_lite.ps1`，含真实网络下载 68 MB）**：
+
+| 指标 | 数值 |
+|---|---|
+| 双击 → 引导窗体可见 | **816 ms** |
+| 在线版本查询 | 8.0.31（2026-09-08，8.0 线最新） |
+| **下载 68 MB（双包）+ 覆盖式解压 + 启动主程序** | **8.9 s**（带宽相关，进度条/速度/源实时可见） |
+| runtime 落盘 | 160.1 MB（`dependencies\runtime\x64\dotnet`） |
+| 主程序悬浮窗 | 可见 ✅（框架依赖进程 WS 123.8 MB，**无自解压开销**） |
+| 二次启动 | 引导器**直接转发**（无窗体），主程序 2.0 s 内启动 ✅ |
+| 引导日志 | 逐条：进入引导 → 目标版本 → 运行时就绪 → 使用本地运行时 ✅ |
+
+### 四、交付终态（`Releases\`）
+
+```
+Releases\
+├─ 完整版\   121.4 MB   Cship.exe(63.2M) + Cship-x86.exe(57.9M) + dependencies\resources
+└─ 精简版\      2.5 MB   Cship.exe(157K) + Cship-x86.exe(157K) + Cship.app.exe(975K)
+                         + Cship.app-x86.exe(948K) + dependencies\resources
+```
+
+- 测试生成的 `完整版\dependencies\config\`、`精简版\dependencies\{config,runtime}\` 已清理，
+  交付恢复"仅产品本身"；精简版首次运行时引导器下载运行时、主程序自建 config。
+- **两档共用同一套 config 结构**（主程序是同一份源码、同一套 `Paths`），用户在两档间迁移设置无需改动。
+
+### 五、源码仓库（`CShips\`）同步
+
+- 新增 `src\CshipBootstrapper\`（csproj / app.manifest / App.config / Program.cs / RuntimeLocator.cs /
+  KnownSources.cs / BootstrapForm.cs）。
+- `build\build.ps1` 改双档（`-Mode full|lite|both`、`-NoCompress`）；新增 `build\_step8_lite.ps1`。
+- `README.md` 重写"快速开始/从源码构建"，"已知限制"补精简版联网与完整版压缩两条；
+  `build\README.md` 同步；`.gitignore` 增 `**/dependencies/runtime/`。
+
+### 补充决策（续 295）
+
+296. **两档交付取代单档（完整版默认压缩）**：用户体积诉求显式压倒此前"默认不压缩"——完整版是"离线兜底"档，
+     默认 `-Compress`（121 MB），精简版承载"小体积 + 性能"定位（124 MB 内存 vs 完整版 240 MB）。
+     决策 291 的实测数据（压缩使常驻内存 +120MB、启动慢 440~730ms）依然成立并写进两处文档，
+     作为两档选择的判断依据；`-NoCompress` 保留。**交付目录从单层变两层：`完整版\` + `精简版\`。**
+297. **"需要哪个依赖保留哪个"在离线档没有官方实现路径，如实告知而不是硬裁**：WPF 不支持 `PublishTrimmed`
+     （官方未支持，运行时崩溃），`InvariantGlobalization` 被中文排序场景锁死。离线即用的正路下限 =
+     压缩单文件 63/58 MB。对"极小体积"的诉求，正确响应是**换交付形态**（framework-dependent）而不是
+     破坏运行时完整性——后者会让"绝不黑底、绝不崩溃"的铁律破产。
+298. **引导器必须能在"最裸的机器"上跑起来**：目标机器可能没有 .NET 8，故引导器面向 net48
+     （Win10/11 自带 .NET Framework 4.8，WinForms，157 KB 单文件）。自身按**文件名**区分架构语义
+     （含 `x86` → 管 x86 主程序），同一 AnyCPU 程序集改名两次即得两个入口，无需分架构编译。
+299. **运行时获取 = 两个官方 zip 覆盖式叠加**：官方没有"桌面完整根"zip（WindowsDesktop zip 缺 host\fxr，
+     实测确认）；基础 runtime zip 提供 `host\fxr + Microsoft.NETCore.App`，桌面包提供
+     `Microsoft.WindowsDesktop.App`，两包先后解压到同一目录即完整 DOTNET_ROOT 布局。
+     解压必须**逐条覆盖**（两包许可文件同名，ExtractToDirectory 会因已存在文件抛异常），
+     完成后整体 `Directory.Move` 就位（staging 模式防半成品），并校验 host\fxr 与 8.x 框架目录存在。
+     运行时注入 `DOTNET_ROOT_X64/X86`——绿色、免管理员、零注册表。
+300. **版本策略：在线查询优先，内置常量兜底**：构建日（2026-10-06）8.0 线最新为 8.0.31；
+     引导器运行时查 releases.json 的 `latest-runtime`（正则提取，net48 无 System.Text.Json），
+     查询失败退回内置常量。框架判定只认 8.x（主程序锁 net8.0，RollForward 只在 8.0 线内滚动）。
+301. **引导器是一次性网关，不是常驻组件**：找到可用运行时即启动主程序并退出，绝不驻留；
+     `CSHIP_FORCE_BOOTSTRAP=1` 是唯一的强制重装通道（排障/自动化测试用），隐藏且不干扰正常路径。
+
+### 给后续步骤的接口提示
+
+- **重建交付**：`CShips\build\build.ps1`（两档全出，~25s）；单档加 `-Mode full|lite`；
+  完整版关压缩加 `-NoCompress`。产物永远落在 `dock++\Releases\{完整版,精简版}\`。
+- **改引导器**：源码在 `src\CshipBootstrapper`；它面向 net48，**不要使用 C# 8+ 语法与 .NET 8 API**
+  （当前 LangVersion=7.3）；下载源/版本常量在 `KnownSources.cs`。
+- **精简版测试**：`build\_step8_lite.ps1`（真实下载 68MB，跑前确认网络）；日常冒烟用
+  `CSHIP_FORCE_BOOTSTRAP=1` 强制走引导窗。
+- **发新补丁版后**：仅需更新 `KnownSources.FallbackVersion`（在线查询会自动追新，常量只是离线兜底）。
+
+### 留人工验证项（本次修订新增）
+
+1. **真正无 .NET 8 的纯净机器上走精简版引导**：本机装有 SDK，引导链路是用 `CSHIP_FORCE_BOOTSTRAP=1`
+   强制走通的（下载/解压/启动全真实），但"系统检测分支为空"的判定在纯净机上需复核一次。
+2. **32 位精简版**：`Cship-x86.exe`（引导器）+ `Cship.app-x86.exe` 的 x86 全链路逻辑与 x64 完全同构，
+   本机只实测了 x64 链路（x86 主程序 WOW64 已在完整版验证）。
+3. **慢速/受限网络下的换源体验**：三源轮询与"更换下载源"按钮已实现，多源全挂时的提示与"改用完整版"
+   引导文案待真实弱网复核。
