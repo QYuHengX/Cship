@@ -40,7 +40,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $proj = Join-Path $root 'src\Cship'
-$outDir = Join-Path $root 'Releases'
+# 交付根 = dock++\Releases\（与源码仓库 CShips\ 同级）。本脚本在两种位置都能跑出同一结果：
+#   · 开发工作区 dock++\（其下存在 CShips\）→ 交付根就是 $root
+#   · 源码仓库 CShips\（从仓库内构建）      → 交付根是仓库的上一级
+$outDir = if (Test-Path -LiteralPath (Join-Path $root 'CShips')) {
+    Join-Path $root 'Releases'
+} else {
+    Join-Path (Split-Path -Parent $root) 'Releases'
+}
 $stage = Join-Path $root 'build\_publish'
 $resSrc = Join-Path $proj 'dependencies\resources'
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
