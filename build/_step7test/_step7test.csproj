@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 07 步验证夹具（不入交付）：把真实的 SystemBridge.cs / Autostart.cs / Paths.cs 编进本程序集，
+       直接调用本步新增能力做端到端验证。零第三方依赖。运行见 build\run_step7test.ps1 -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>step7test</AssemblyName>
+    <RootNamespace>Step7Test</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Stubs.cs" />
+    <Compile Include="..\..\src\Cship\core\SystemBridge.cs" />
+    <Compile Include="..\..\src\Cship\core\Autostart.cs" />
+    <Compile Include="..\..\src\Cship\core\Paths.cs" />
+  </ItemGroup>
+
+</Project>

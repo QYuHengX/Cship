@@ -1,0 +1,36 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 亮色主题（00 §9 调色板 + 步骤 05 SettingsPalette 既有色值，逐字迁移保证零视觉回归）。
+         键名固定（见 Tokens.xaml 注释），新配色字典必须提供同名键。
+         画刷由 ThemeEngine 加载后统一 Freeze（运行时不再变更，可安全跨线程共享）。 -->
+
+    <Color x:Key="Color.Bg">#FFF9F9F9</Color>
+    <Color x:Key="Color.Card">#80FFFFFF</Color>
+    <Color x:Key="Color.TextPrimary">#FF1B1B1B</Color>
+    <Color x:Key="Color.TextSecondary">#FF5F5F5F</Color>
+    <Color x:Key="Color.Divider">#FFE5E5E5</Color>
+    <Color x:Key="Color.Accent">#FF3C3C3C</Color>
+    <Color x:Key="Color.OnAccent">#FFFFFFFF</Color>
+    <Color x:Key="Color.HoverOverlay">#14000000</Color>
+    <Color x:Key="Color.Track">#26000000</Color>
+    <Color x:Key="Color.Danger">#FFFF6B6B</Color>
+    <Color x:Key="Color.MenuBg">#E6F9F9F9</Color>
+    <Color x:Key="Color.MenuBorder">#2E000000</Color>
+    <Color x:Key="Color.MenuHover">#14000000</Color>
+    <Color x:Key="Color.PlateBorder">#14000000</Color>
+
+    <SolidColorBrush x:Key="Brush.Bg" Color="{StaticResource Color.Bg}"/>
+    <SolidColorBrush x:Key="Brush.Card" Color="{StaticResource Color.Card}"/>
+    <SolidColorBrush x:Key="Brush.TextPrimary" Color="{StaticResource Color.TextPrimary}"/>
+    <SolidColorBrush x:Key="Brush.TextSecondary" Color="{StaticResource Color.TextSecondary}"/>
+    <SolidColorBrush x:Key="Brush.Divider" Color="{StaticResource Color.Divider}"/>
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}"/>
+    <SolidColorBrush x:Key="Brush.OnAccent" Color="{StaticResource Color.OnAccent}"/>
+    <SolidColorBrush x:Key="Brush.HoverOverlay" Color="{StaticResource Color.HoverOverlay}"/>
+    <SolidColorBrush x:Key="Brush.Track" Color="{StaticResource Color.Track}"/>
+    <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}"/>
+    <SolidColorBrush x:Key="Brush.MenuBg" Color="{StaticResource Color.MenuBg}"/>
+    <SolidColorBrush x:Key="Brush.MenuBorder" Color="{StaticResource Color.MenuBorder}"/>
+    <SolidColorBrush x:Key="Brush.MenuHover" Color="{StaticResource Color.MenuHover}"/>
+    <SolidColorBrush x:Key="Brush.PlateBorder" Color="{StaticResource Color.PlateBorder}"/>
+</ResourceDictionary>

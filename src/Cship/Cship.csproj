@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms 仅用于托盘 NotifyIcon 与屏幕枚举（00 §4） -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>Cship</AssemblyName>
+    <RootNamespace>Cship</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 程序图标（步骤 06 附加需求）：素材 CShip.png 转制的多尺寸 ico——
+         exe 文件图标 / 任务栏 / 任务管理器 / 托盘（托盘另经 resources\icons\app.ico 加载），
+         四处同一来源、观感一致。生成脚本 build\makeicon.py。 -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <!-- WFAC010：WinForms 专属提示（让把 DPI 从 manifest 挪到 ApplicationHighDpiMode）。
+         本应用以 WPF 为主，PerMonitorV2 必须留在 app.manifest（步骤 1.3），故抑制该提示。 -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 外置资源复制到输出目录，保证开发态/发布态路径逻辑一致（00 §5.3） -->
+    <Content Include="dependencies\resources\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="dependencies\resources\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

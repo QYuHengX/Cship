@@ -1,0 +1,33 @@
+<UserControl x:Class="Cship.Ui.Components.MaterialBackground"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 玻璃窗口材质层（步骤 06；2026-10-06 改为"图层堆叠"口径）。
+         绘制次序（下→上）：**系统合成器模糊**（DWM，窗口背后，不在本树里）
+         → 板底色（Plate.Background）→ 噪点
+         → 液态玻璃的"玻璃厚度"四层（边缘渐深 / 顶部镜面 / 底部内阴影 / 内缘高光，仅该档可见）
+         → 发丝描边（Plate.BorderBrush）。
+         系统模糊不可用时（老系统/API 失效）本层照样完整可读 —— 只是没有"透出桌面"的观感，绝不黑底。
+         子元素用 ClipHost.Clip 圆角裁剪：底色本身是圆角 Border，但高光/内阴影是矩形子元素，
+         必须硬裁到圆角轮廓才不出方角。
+
+         **板底只画一层**（2026-10-06 修）：旧实现的"板底 + 截屏层 + 同色叠层"是**夹心**结构——
+         截屏（模糊后的桌面）夹在两层同色底之间，于是模糊贡献 α=10%。改成系统模糊后模糊跑到窗口背后，
+         若两层同色底仍叠着，合成不透明度会变成 1-(1-0.9)² ≈ 99%，**模糊只剩 0.8% = 等于看不见**。
+         故现在只保留 Plate.Background 这一层，模糊的可见度回到与旧版一致的水平。 -->
+    <Grid>
+        <Border x:Name="Plate" CornerRadius="12" BorderThickness="1">
+            <Grid x:Name="ClipHost">
+                <Border x:Name="NoiseLayer" Opacity="0.04" IsHitTestVisible="False"/>
+                <Border x:Name="Vignette" Opacity="0" IsHitTestVisible="False"/>
+                <Border x:Name="Specular" Opacity="0" IsHitTestVisible="False"/>
+                <Border x:Name="InnerShadow" Opacity="0" IsHitTestVisible="False"/>
+                <Border x:Name="Rim" Opacity="0" BorderThickness="1.5" CornerRadius="12" IsHitTestVisible="False"/>
+            </Grid>
+        </Border>
+
+        <!-- 四角羽化补丁（2026-10-06）：系统模糊铺满整个窗口矩形、形状裁不住（实测四条路都不通），
+             圆角外那圈会露出"被糊的桌面"。这里用板底色按径向渐隐把这圈月牙补上：
+             圆弧处强度=板内、角落处=0 —— 硬棱角被磨成柔和过渡。由代码按四角半径逐个生成。 -->
+        <Canvas x:Name="CornerVeilHost" IsHitTestVisible="False"/>
+    </Grid>
+</UserControl>

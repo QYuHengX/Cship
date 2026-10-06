@@ -1,0 +1,66 @@
+<UserControl x:Class="Cship.Ui.Components.IconItem"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 图标项（步骤 3）：DataContext = Models.BoardItem；尺寸/遮罩/指示灯/名称由 ApplySettings 装配。
+         行结构（2026-10-05 清单05任务4）：顶距 6 / 图标 / 指示灯预留条 8 / 名称——
+         指示灯与打开三点都落在"图标与名称之间"的固定条内，与文件名是否显示无关
+         （相对图标位置恒定；条宽 8=IconItem.IndicatorStrip，与 BoardWindow.Relayout 同口径）。 -->
+    <Grid x:Name="Root" Background="Transparent" Cursor="Hand" ClipToBounds="False" Focusable="False">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="6"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 悬停命中区=Root 本体（固定不动，修订B：跳起动画挂在 JumpHost 内层——
+             若 Transform 挂在 Root，指针停在图标底边时跳起→指针"离开"→落下→再跳，无限振荡）；
+             JumpHost 只覆盖"顶距+图标"两行，指示灯带不属于它（跳动/挤压时位置不动） -->
+        <Grid x:Name="JumpHost" Grid.Row="0" Grid.RowSpan="2" Background="Transparent" RenderTransformOrigin="0.5,0.5">
+            <Grid.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform x:Name="Jump"/>
+                    <ScaleTransform x:Name="Squash"/>
+                </TransformGroup>
+            </Grid.RenderTransform>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 悬停文件名气泡已上移到收纳板层（BoardWindow.HoverTip，2026-10-04 错误修复④）：
+                 完整名字、不透明底、显示在图标上方不遮挡图标——图标格内放不下"图标上方"且不被裁剪 -->
+            <Grid x:Name="IconArea" Grid.Row="1">
+                <Border x:Name="MaskPlate" Background="#FFFFFFFF" Visibility="Collapsed"/>
+                <Image x:Name="IconImage" Stretch="Uniform"/>
+            </Grid>
+        </Grid>
+
+        <!-- 指示灯位（图标与名称之间）：运行指示灯常驻此条；打开中改为三点循环（清单05任务5），
+             二者都挂在 JumpHost 之外——图标跳动/挤压动画时自身不动 -->
+        <Grid x:Name="IndicatorHost" Grid.Row="2" IsHitTestVisible="False">
+            <Border x:Name="Indicator" Width="12" Height="3.5" CornerRadius="2"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="Collapsed" IsHitTestVisible="False"/>
+            <!-- 打开三点（4px，色=指示灯色）：相位错开往复闪烁，IsRunning 转亮后汇聚淡出=指示灯 -->
+            <Canvas x:Name="DotsHost" Width="22" Height="8" HorizontalAlignment="Center"
+                    VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False">
+                <Ellipse x:Name="Dot0" Width="4" Height="4" Canvas.Left="1" Canvas.Top="2">
+                    <Ellipse.RenderTransform><TranslateTransform x:Name="Dot0Shift"/></Ellipse.RenderTransform>
+                </Ellipse>
+                <Ellipse x:Name="Dot1" Width="4" Height="4" Canvas.Left="9" Canvas.Top="2"/>
+                <Ellipse x:Name="Dot2" Width="4" Height="4" Canvas.Left="17" Canvas.Top="2">
+                    <Ellipse.RenderTransform><TranslateTransform x:Name="Dot2Shift"/></Ellipse.RenderTransform>
+                </Ellipse>
+            </Canvas>
+        </Grid>
+
+        <!-- 名称（display.showLabels）：行数档由 ConfigureNameText 装配（一行/两行/3 行文字，2026-10-04） -->
+        <TextBlock x:Name="NameText" Grid.Row="3" FontSize="12" LineHeight="16" MaxHeight="48"
+                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                   HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,0"/>
+        <!-- 内联重命名（右键菜单进入） -->
+        <TextBox x:Name="RenameBox" Grid.Row="3" FontSize="12" Visibility="Collapsed" Margin="0,3,0,0"
+                 HorizontalAlignment="Stretch"/>
+    </Grid>
+</UserControl>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 临时验收夹具（不入交付、不入 .sln）：引用主产物 Cship.dll，
+       A=配置导入导出往返自检；B=主题预览卡离屏渲染出图。
+       运行方式见 build/_uitest/run.ps1：把输出连同 dependencies\resources 复制到 run\ 再执行。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>cshipcheck</AssemblyName>
+    <RootNamespace>CshipCheck</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultItems>true</EnableDefaultItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Cship">
+      <HintPath>..\_verify_fix\Cship.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

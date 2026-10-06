@@ -1,0 +1,28 @@
+# ---- 构建产物（dotnet build / publish 可再生）----
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+
+# ---- 运行时生成（程序首启自动重建，不入库）----
+# 开发态：csproj 把 dependencies\resources 复制到输出目录，其中的 config 是本机数据
+src/Cship/dependencies/config/
+
+# ---- 构建 / 测试临时产物 ----
+build/_publish/
+build/_verify_fix/
+build/_uitest/run/
+build/_uitest/live/
+build/__pycache__/
+__pycache__/
+*.pyc
+
+# ---- 发布产物（由 build.ps1 生成，可再生）----
+Releases/
+dist/
+
+# ---- 杂项 ----
+*.log
+build/*.png
+build/*.gif

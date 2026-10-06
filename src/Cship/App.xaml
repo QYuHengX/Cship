@@ -1,0 +1,8 @@
+<Application x:Class="Cship.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <!-- 常驻程序：仅托盘"关闭/重启"显式退出，不受窗口开关影响（00 §2·步骤 2） -->
+    <Application.Resources>
+    </Application.Resources>
+</Application>
